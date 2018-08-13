@@ -60,13 +60,18 @@ elseif ngx.var.request_uri == "/rsvp/search" then
   local res = assert(pg:query(q))
 
 
+  local guests_added = {}
   local parties = {}
   for _, row in ipairs(res) do
+    local name = row.first .. " " .. row.last
     local id = row.party_id
-    if parties[id] then
-      parties[id] = parties[id] .. " & " .. row.first .. " " .. row.last
-    else
-      parties[id] = row.first .. " " .. row.last
+    if not guests_added[name] then
+      if parties[id] then
+        parties[id] = parties[id] .. " & " .. name
+      else
+        parties[id] = name
+      end
+      guests_added[name] = true
     end
   end
 
