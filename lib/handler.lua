@@ -81,7 +81,7 @@ elseif ngx.var.request_uri == "/rsvp/search" then
   end
 
   if parties_text == "" then
-    parties_text = "Last name " .. args.lastname .. [[ not found.  <a href="/">Try again?</a>]]
+    parties_text = "Last name " .. args.lastname .. [[ not found.  <a href="/rsvp">Try again?</a>]]
   else
     parties_text = "Select your party from the list below: <ul>\n" .. parties_text .. "</ul>"
   end
