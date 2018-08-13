@@ -201,6 +201,7 @@ in rec {
       extraConfig = ''
         default_type text/html;
         content_by_lua_file ${site}/lib/handler.lua;
+        lua_need_request_body on;
         set $template_root ${site}/templates;
         set $ceremony-rsvp-password ${ceremony-rsvp-password};
       '';

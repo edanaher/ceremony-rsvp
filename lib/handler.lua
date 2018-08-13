@@ -11,11 +11,41 @@ local pg = pgmoon.new {
   user = "rsvpsite";
   password = ngx.var.angell_password or "secret";
 }
+assert(pg:connect())
 
 template.caching(false)
 
-template.render("index.html", {
-})
+function show_error(err)
+  ngx.say("Error: " .. tostring(err))
+  ngx.say([[<a href="us@kellyandevan.party">E-mail us</a>]])
+end
+
+if ngx.var.request_uri == "/" then
+  template.render("index.html", {
+  })
+elseif ngx.var.request_uri == "/submit" then
+  ngx.say("Submitted")
+  local args, err = ngx.req.get_post_args()
+  if err then
+    return show_error(err)
+  end
+
+  for k, v in pairs(args) do
+    ngx.say("<p>" .. k .. ": " .. v .. "</p>")
+  end
+
+  local q = "INSERT INTO guests (first_name, last_name, attending, food) VALUES (" ..
+    pg:escape_literal(args.firstname1) .. ", " ..
+    pg:escape_literal(args.lastname1) .. ", " ..
+    pg:escape_literal(args.attending1 == "on") .. ", " ..
+    pg:escape_literal(args.food1 or "") .. ") RETURNING guest_id"
+  ngx.log(ngx.ERR, "QUERY is " .. q)
+  local res, err = pg:query(q)
+  if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+  local id = res[1].email_id
+end
+
+pg:keepalive()
 
 --EMAIL_TEMPLATE =
 --[[To sign into angell.kdf.sh to manage your subscriptions, either enter the
@@ -250,4 +280,4 @@ template.render("index.html", {
 --
 --dispatch()
 --
---pg:keepalive()
+
