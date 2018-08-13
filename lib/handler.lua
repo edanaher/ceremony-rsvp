@@ -9,7 +9,7 @@ local pg = pgmoon.new {
   port = "5432";
   database = "rsvpsite";
   user = "rsvpsite";
-  password = ngx.var.angell_password or "secret";
+  password = ngx.var.ceremony_rsvp_password or "secret";
 }
 assert(pg:connect())
 
