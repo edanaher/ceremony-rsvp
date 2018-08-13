@@ -136,12 +136,12 @@ elseif ngx.var.request_uri == "/submit" then
     else
       q = "UPDATE guests SET attending = 'f', food = NULL WHERE guest_id = " .. pg:escape_literal(tonumber(id))
     end
+    ngx.log(ngx.ERR, "query is " .. q)
     local res, err = pg:query(q)
     if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
   end
 
   if args.plus1first and args.plus1first ~= "" then
-    ngx.log(ngx.ERR, "plus1first is " .. tostring(args.plus1first))
       q = "INSERT INTO guests (party_id, first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
            pg:escape_literal(tonumber(args.party_id)) .. ", " ..
            pg:escape_literal(args.plus1first) .. ", " ..
@@ -155,6 +155,13 @@ elseif ngx.var.request_uri == "/submit" then
     if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
   end
 
+  local comments = args.comments or ""
+    q = "UPDATE parties SET responded='t', " ..
+         "comments = " .. pg:escape_literal(args.comments) .. 
+         " WHERE party_id = " ..  pg:escape_literal(tonumber(args.party_id))
+  local res, err = pg:query(q)
+  ngx.log(ngx.ERR, "query is " .. q)
+  if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
 
 --  local q = "INSERT INTO guests (first_name, last_name, attending, food) VALUES (" ..
 --    pg:escape_literal(args.firstname1) .. ", " ..
