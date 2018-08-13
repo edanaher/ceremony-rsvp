@@ -77,7 +77,8 @@ if party then
   local q = "SELECT guests.guest_id AS guest_id, guests.first_name AS first, guests.last_name AS last FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
 
-  guest_inputs = ""
+  local guest_ids = ""
+  local guest_inputs = ""
   local tmp = template.compile(guestFormTemplate)
   for _, row in ipairs(res) do
     guest_inputs = guest_inputs .. 
@@ -85,31 +86,45 @@ if party then
           name = row.first .. " " .. row.last,
           id = row.guest_id
         } .. "\n"
+    if guest_ids == "" then
+      guest_ids = row.guest_id
+    else
+      guest_ids = guest_ids .. " " ..  row.guest_id
+    end
   end
   template.render("rsvp.html", {
-    guest_inputs = guest_inputs
+    guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]]
   })
 
 elseif ngx.var.request_uri == "/submit" then
-  ngx.say("Submitted")
   local args, err = ngx.req.get_post_args()
   if err then
     return show_error(err)
   end
 
-  for k, v in pairs(args) do
-    ngx.say("<p>" .. k .. ": " .. v .. "</p>")
+  for id in string.gmatch(args.guests, "%S+") do
+    if args["attending_" .. id] then
+      q = "UPDATE guests SET " ..
+          "attending = " .. pg:escape_literal(args["attending_" .. id] == "on") .. ", " ..
+          "food = " .. pg:escape_literal(args["food_" .. id] or "") .. " WHERE guest_id = " .. pg:escape_literal(tonumber(id))
+    else
+      q = "UPDATE guests SET attending = 'f', food = NULL WHERE guest_id = " .. pg:escape_literal(tonumber(id))
+    end
+    local res, err = pg:query(q)
+    if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
   end
 
-  local q = "INSERT INTO guests (first_name, last_name, attending, food) VALUES (" ..
-    pg:escape_literal(args.firstname1) .. ", " ..
-    pg:escape_literal(args.lastname1) .. ", " ..
-    pg:escape_literal(args.attending1 == "on") .. ", " ..
-    pg:escape_literal(args.food1 or "") .. ") RETURNING guest_id"
-  ngx.log(ngx.ERR, "QUERY is " .. q)
-  local res, err = pg:query(q)
-  if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
-  local id = res[1].email_id
+
+--  local q = "INSERT INTO guests (first_name, last_name, attending, food) VALUES (" ..
+--    pg:escape_literal(args.firstname1) .. ", " ..
+--    pg:escape_literal(args.lastname1) .. ", " ..
+--    pg:escape_literal(args.attending1 == "on") .. ", " ..
+--    pg:escape_literal(args.food1 or "") .. ") RETURNING guest_id"
+--  ngx.log(ngx.ERR, "QUERY is " .. q)
+--  local res, err = pg:query(q)
+--  if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+--  local id = res[1].email_id
+  ngx.say([[Response submitted!  Consider visiting <a href="/">our web site</a> for more information.]])
 end
 
 pg:keepalive()
