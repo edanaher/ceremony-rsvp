@@ -21,7 +21,7 @@ function show_error(err)
 end
 
 local guestFormTemplate = [[
-  <p>{{name}}</p>
+  <h3>{{name}}</h3>
   <div class="guest">
     <p>Attending: <input type="checkbox" name="attending_{{id}}" /></p>
     <p>Food choice:
@@ -30,6 +30,20 @@ local guestFormTemplate = [[
       <input type="radio" name="food_{{id}}" value="vegetarian">Vegetarian Surprise</input>
     </p>
     <p>Food restrictions/allergies: <input type="text" name="allergies_{{id}}"/></p>
+  </div>
+]]
+
+local plus1Template = [[
+  If you have a +1 who will be attending, please give us his or her information:
+  <div class="guest">
+    <p>First name: <input type="text" name="plus1first"/></p>
+    <p>Last name: <input type="text" name="plus1last"/></p>
+    <p>Food choice:
+      <input type="radio" name="plus1food" value="duck">Duck</input>
+      <input type="radio" name="plus1food" value="fish">Fish</input>
+      <input type="radio" name="plus1food" value="vegetarian">Vegetarian Surprise</input>
+    </p>
+    <p>Food restrictions/allergies: <input type="text" name="plus1allergies"/></p>
   </div>
 ]]
 
@@ -42,7 +56,7 @@ elseif ngx.var.request_uri == "/search" then
     return show_error(err)
   end
 
-  local q = "SELECT parties.party_id AS party_id, guests.first_name AS first, guests.last_name AS last FROM guests JOIN parties USING (party_id) JOIN guests AS guest_search USING (party_id) WHERE guest_search.last_name = " .. pg:escape_literal(args.lastname)
+  local q = "SELECT parties.party_id AS party_id, guests.first_name AS first, guests.last_name AS last FROM guests JOIN parties USING (party_id) JOIN guests AS guest_search USING (party_id) WHERE LOWER(guest_search.last_name) = LOWER(" .. pg:escape_literal(args.lastname) .. ")"
   local res = assert(pg:query(q))
 
 
@@ -81,6 +95,7 @@ if party then
   local guest_ids = ""
   local guest_inputs = ""
   local tmp = template.compile(guestFormTemplate)
+  local guest_count = 0
   for _, row in ipairs(res) do
     guest_inputs = guest_inputs .. 
          tmp {
@@ -92,9 +107,16 @@ if party then
     else
       guest_ids = guest_ids .. " " ..  row.guest_id
     end
+    guest_count = guest_count + 1
+  end
+  if guest_count == 1 then
+    plus1_input = plus1Template
+  else
+    plus1_input = ""
   end
   template.render("rsvp.html", {
-    guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]]
+    guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]],
+    plus1_input = plus1_input
   })
 
 elseif ngx.var.request_uri == "/submit" then
