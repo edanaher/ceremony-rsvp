@@ -23,13 +23,13 @@ end
 local guestFormTemplate = [[
   <h3>{{name}}</h3>
   <div class="guest">
-    <p>Attending: <input type="checkbox" name="attending_{{id}}" /></p>
+    <p>Attending: <input type="checkbox" name="attending_{{id}}" {{attending_checked}} /></p>
     <p>Food choice:
-      <input type="radio" name="food_{{id}}" value="duck">Duck</input>
-      <input type="radio" name="food_{{id}}" value="fish">Fish</input>
-      <input type="radio" name="food_{{id}}" value="vegetarian">Vegetarian Surprise</input>
+      <input type="radio" name="food_{{id}}" value="duck" {{duck_checked}} >Duck</input>
+      <input type="radio" name="food_{{id}}" value="fish" {{fish_checked}} >Fish</input>
+      <input type="radio" name="food_{{id}}" value="vegetarian" {{veg_checked}} >Vegetarian Surprise</input>
     </p>
-    <p>Food restrictions/allergies: <input type="text" name="allergies_{{id}}"/></p>
+    <p>Food restrictions/allergies: <input type="text" name="allergies_{{id}}" value="{{allergies}}" /></p>
   </div>
 ]]
 
@@ -94,8 +94,16 @@ end
 
 local party = ngx.var.request_uri:match("/rsvp/rsvp/(.+)")
 if party then
-  local q = "SELECT guests.guest_id AS guest_id, guests.first_name AS first, guests.last_name AS last FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, allergies FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
+
+  local q = "SELECT comments FROM parties WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local pres = assert(pg:query(q))
+  if #pres > 0 then
+    pres = pres[1]
+  else
+    pres = {}
+  end
 
   local guest_ids = ""
   local guest_inputs = ""
@@ -105,7 +113,12 @@ if party then
     guest_inputs = guest_inputs .. 
          tmp {
           name = row.first .. " " .. row.last,
-          id = row.guest_id
+          id = row.guest_id,
+          attending_checked = row.attending and "checked" or "",
+          duck_checked = row.food == "duck" and "checked" or "",
+          fish_checked = row.food == "fish" and "checked" or "",
+          veg_checked = row.food == "vegetarian" and "checked" or "",
+          allergies = row.allergies or "",
         } .. "\n"
     if guest_ids == "" then
       guest_ids = row.guest_id
@@ -122,7 +135,8 @@ if party then
   template.render("rsvp.html", {
     guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]] ..
                                    [[<input type="hidden" name="party_id" value="]] .. party .. [["/>]],
-    plus1_input = plus1_input
+    plus1_input = plus1_input,
+    comments = pres.comments or ""
   })
 
 elseif ngx.var.request_uri == "/rsvp/submit" then
