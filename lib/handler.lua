@@ -47,10 +47,10 @@ local plus1Template = [[
   </div>
 ]]
 
-if ngx.var.request_uri == "/" then
+if ngx.var.request_uri == "/rsvp" or ngx.var.request_uri == "/rsvp/" then
   return template.render("index.html", {
   })
-elseif ngx.var.request_uri == "/search" then
+elseif ngx.var.request_uri == "/rsvp/search" then
   local args, err = ngx.req.get_post_args()
   if err then
     return show_error(err)
@@ -72,7 +72,7 @@ elseif ngx.var.request_uri == "/search" then
 
   local parties_text = ""
   for k, v in pairs(parties) do
-    parties_text = parties_text .. "<li><a href=/rsvp/" .. k .. ">" .. v .. "</a></li>\n"
+    parties_text = parties_text .. "<li><a href=/rsvp/rsvp/" .. k .. ">" .. v .. "</a></li>\n"
   end
 
   if parties_text == "" then
@@ -87,7 +87,7 @@ elseif ngx.var.request_uri == "/search" then
   return
 end
 
-local party = ngx.var.request_uri:match("/rsvp/(.+)")
+local party = ngx.var.request_uri:match("/rsvp/rsvp/(.+)")
 if party then
   local q = "SELECT guests.guest_id AS guest_id, guests.first_name AS first, guests.last_name AS last FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
@@ -120,7 +120,7 @@ if party then
     plus1_input = plus1_input
   })
 
-elseif ngx.var.request_uri == "/submit" then
+elseif ngx.var.request_uri == "/rsvp/submit" then
   local args, err = ngx.req.get_post_args()
   if err then
     return show_error(err)
