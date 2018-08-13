@@ -197,7 +197,7 @@ in rec {
   lua-path = "${pgmoon}/lib/?.lua;${pgmoon}/lib/?/init.lua;${lua-resty-path}";
   nginx-locations = {
     #locations."/_static".alias = "${site}/static";
-    locations."/" = {
+    locations."/rsvp" = {
       extraConfig = ''
         default_type text/html;
         content_by_lua_file ${site}/lib/handler.lua;
