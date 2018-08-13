@@ -29,6 +29,7 @@ local guestFormTemplate = [[
       <input type="radio" name="food_{{id}}" value="fish">Fish</input>
       <input type="radio" name="food_{{id}}" value="vegetarian">Vegetarian Surprise</input>
     </p>
+    <p>Food restrictions/allergies: <input type="text" name="allergies_{{id}}"/></p>
   </div>
 ]]
 
@@ -106,11 +107,27 @@ elseif ngx.var.request_uri == "/submit" then
     if args["attending_" .. id] then
       q = "UPDATE guests SET " ..
           "attending = " .. pg:escape_literal(args["attending_" .. id] == "on") .. ", " ..
-          "food = " .. pg:escape_literal(args["food_" .. id] or "") .. " WHERE guest_id = " .. pg:escape_literal(tonumber(id))
+          "food = " .. pg:escape_literal(args["food_" .. id] or "") .. ", " ..
+          "allergies = " .. pg:escape_literal(args["allergies_" .. id] or "") ..
+          " WHERE guest_id = " .. pg:escape_literal(tonumber(id))
     else
       q = "UPDATE guests SET attending = 'f', food = NULL WHERE guest_id = " .. pg:escape_literal(tonumber(id))
     end
     local res, err = pg:query(q)
+    if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+  end
+
+  if args.plus1first and args.plus1first ~= "" then
+    ngx.log(ngx.ERR, "plus1first is " .. tostring(args.plus1first))
+      q = "INSERT INTO guests (first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
+           pg:escape_literal(args.plus1first) .. ", " ..
+           pg:escape_literal(args.plus1last) .. ", " ..
+           pg:escape_literal(true) .. ", " ..
+           pg:escape_literal(args.plus1food or "") .. ", " ..
+           pg:escape_literal(true) .. ", " ..
+           pg:escape_literal(args.plus1allergies) .. ")"
+    local res, err = pg:query(q)
+    ngx.log(ngx.ERR, "query is " .. q)
     if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
   end
 

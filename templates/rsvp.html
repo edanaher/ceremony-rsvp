@@ -12,8 +12,20 @@
     </style>
   <head>
   <body>
+    <p>Please give us the following information about each member of your party:</p>
     <form id="form" action="/submit" method="POST">
       {*guest_inputs*}
+      If you have a +1 who will be attending, please give us his or her information:
+      <div class="guest">
+        <p>First name: <input type="text" name="plus1first"/></p>
+        <p>Last name: <input type="text" name="plus1last"/></p>
+        <p>Food choice:
+          <input type="radio" name="plus1food" value="duck">Duck</input>
+          <input type="radio" name="plus1food" value="fish">Fish</input>
+          <input type="radio" name="plus1food" value="vegetarian">Vegetarian Surprise</input>
+        </p>
+        <p>Food restrictions/allergies: <input type="text" name="plus1allergies"/></p>
+      </div>
       <input type="submit" value="RSVP"></input>
     </form>
   </body>
