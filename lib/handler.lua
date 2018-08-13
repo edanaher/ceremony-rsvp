@@ -131,6 +131,10 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
     return show_error(err)
   end
 
+  for k, v in pairs(args) do
+    ngx.log(ngx.ERR, "Response: " .. k .. " = " .. v)
+  end
+
   for id in string.gmatch(args.guests, "%S+") do
     if args["attending_" .. id] then
       q = "UPDATE guests SET " ..
