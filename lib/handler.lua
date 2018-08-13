@@ -20,8 +20,20 @@ function show_error(err)
   ngx.say([[<a href="us@kellyandevan.party">E-mail us</a>]])
 end
 
+local guestFormTemplate = [[
+  <p>{{name}}</p>
+  <div class="guest">
+    <p>Attending: <input type="checkbox" name="attending_{{id}}" /></p>
+    <p>Food choice:
+      <input type="radio" name="food_{{id}}" value="duck">Duck</input>
+      <input type="radio" name="food_{{id}}" value="fish">Fish</input>
+      <input type="radio" name="food_{{id}}" value="vegetarian">Vegetarian Surprise</input>
+    </p>
+  </div>
+]]
+
 if ngx.var.request_uri == "/" then
-  template.render("index.html", {
+  return template.render("index.html", {
   })
 elseif ngx.var.request_uri == "/search" then
   local args, err = ngx.req.get_post_args()
@@ -57,6 +69,27 @@ elseif ngx.var.request_uri == "/search" then
   template.render("search.html", {
     parties_text = parties_text
   })
+  return
+end
+
+local party = ngx.var.request_uri:match("/rsvp/(.+)")
+if party then
+  local q = "SELECT guests.guest_id AS guest_id, guests.first_name AS first, guests.last_name AS last FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local res = assert(pg:query(q))
+
+  guest_inputs = ""
+  local tmp = template.compile(guestFormTemplate)
+  for _, row in ipairs(res) do
+    guest_inputs = guest_inputs .. 
+         tmp {
+          name = row.first .. " " .. row.last,
+          id = row.guest_id
+        } .. "\n"
+  end
+  template.render("rsvp.html", {
+    guest_inputs = guest_inputs
+  })
+
 elseif ngx.var.request_uri == "/submit" then
   ngx.say("Submitted")
   local args, err = ngx.req.get_post_args()
