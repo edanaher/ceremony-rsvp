@@ -5,18 +5,17 @@
     </title>
     <script>
     </script>
+    <style type="text/css">
+.guest {
+  margin-left: 20px;
+}
+    </style>
   <head>
   <body>
-    <form id="form" action="/submit" method="POST">
-      <p>First name: <input type="text" name="firstname1" /></p>
-      <p>Last name: <input type="text" name="lastname1" /></p>
-      <p>Attending: <input type="checkbox" name="attending1" /></p>
-      <p>Food choice:
-        <input type="radio" name="food1" value="duck">Duck</input>
-        <input type="radio" name="food1" value="fish">Fish</input>
-        <input type="radio" name="food1" value="vegetarian">Vegetarian Surprise</input>
-      </p>
-      <input type="submit" value="RSVP"></input>
+    <form id="form" action="/search" method="POST">
+      <p>Enter your last name to search for your party</p>
+      <p>Last name: <input type="text" name="lastname"/><p>
+      <input type="submit" value="Search"></input>
     </form>
   </body>
 </html>

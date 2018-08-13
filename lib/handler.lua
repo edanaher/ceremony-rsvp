@@ -23,6 +23,40 @@ end
 if ngx.var.request_uri == "/" then
   template.render("index.html", {
   })
+elseif ngx.var.request_uri == "/search" then
+  local args, err = ngx.req.get_post_args()
+  if err then
+    return show_error(err)
+  end
+
+  local q = "SELECT parties.party_id AS party_id, guests.first_name AS first, guests.last_name AS last FROM guests JOIN parties USING (party_id) JOIN guests AS guest_search USING (party_id) WHERE guest_search.last_name = " .. pg:escape_literal(args.lastname)
+  local res = assert(pg:query(q))
+
+
+  local parties = {}
+  for _, row in ipairs(res) do
+    local id = row.party_id
+    if parties[id] then
+      parties[id] = parties[id] .. " & " .. row.first .. " " .. row.last
+    else
+      parties[id] = row.first .. " " .. row.last
+    end
+  end
+
+  local parties_text = ""
+  for k, v in pairs(parties) do
+    parties_text = parties_text .. "<li><a href=/rsvp/" .. k .. ">" .. v .. "</a></li>\n"
+  end
+
+  if parties_text == "" then
+    parties_text = "Last name " .. args.lastname .. [[ not found.  <a href="/">Try again?</a>]]
+  else
+    parties_text = "Select your party from the list below: <ul>\n" .. parties_text .. "</ul>"
+  end
+
+  template.render("search.html", {
+    parties_text = parties_text
+  })
 elseif ngx.var.request_uri == "/submit" then
   ngx.say("Submitted")
   local args, err = ngx.req.get_post_args()
