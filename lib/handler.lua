@@ -115,7 +115,8 @@ if party then
     plus1_input = ""
   end
   template.render("rsvp.html", {
-    guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]],
+    guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]] ..
+                                   [[<input type="hidden" name="party_id" value="]] .. party .. [["/>]],
     plus1_input = plus1_input
   })
 
@@ -141,7 +142,8 @@ elseif ngx.var.request_uri == "/submit" then
 
   if args.plus1first and args.plus1first ~= "" then
     ngx.log(ngx.ERR, "plus1first is " .. tostring(args.plus1first))
-      q = "INSERT INTO guests (first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
+      q = "INSERT INTO guests (party_id, first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
+           pg:escape_literal(tonumber(args.party_id)) .. ", " ..
            pg:escape_literal(args.plus1first) .. ", " ..
            pg:escape_literal(args.plus1last) .. ", " ..
            pg:escape_literal(true) .. ", " ..
