@@ -36,14 +36,14 @@ local guestFormTemplate = [[
 local plus1Template = [[
   If you have a +1 who will be attending, please give us his or her information:
   <div class="guest">
-    <p>First name: <input type="text" name="plus1first"/></p>
-    <p>Last name: <input type="text" name="plus1last"/></p>
+    <p>First name: <input type="text" name="plus1first" value="{{first}}"/></p>
+    <p>Last name: <input type="text" name="plus1last" value="{{last}}"/></p>
     <p>Food choice:
-      <input type="radio" name="plus1food" value="duck">Duck</input>
-      <input type="radio" name="plus1food" value="fish">Fish</input>
-      <input type="radio" name="plus1food" value="vegetarian">Vegetarian Surprise</input>
+      <input type="radio" name="plus1food" value="duck" {{duck_checked}} >Duck</input>
+      <input type="radio" name="plus1food" value="fish" {{fish_checked}} >Fish</input>
+      <input type="radio" name="plus1food" value="vegetarian" {{veg_checked}} >Vegetarian Surprise</input>
     </p>
-    <p>Food restrictions/allergies: <input type="text" name="plus1allergies"/></p>
+    <p>Food restrictions/allergies: <input type="text" name="plus1allergies" value="{{allergies}}"/></p>
   </div>
 ]]
 
@@ -94,7 +94,7 @@ end
 
 local party = ngx.var.request_uri:match("/rsvp/rsvp/(.+)")
 if party then
-  local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, allergies FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, allergies, is_plusone FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
 
   local q = "SELECT comments FROM parties WHERE party_id = " .. pg:escape_literal(tonumber(party))
@@ -109,28 +109,40 @@ if party then
   local guest_inputs = ""
   local tmp = template.compile(guestFormTemplate)
   local guest_count = 0
+  local plusone = {}
   for _, row in ipairs(res) do
-    guest_inputs = guest_inputs .. 
-         tmp {
-          name = row.first .. " " .. row.last,
-          id = row.guest_id,
-          attending_checked = row.attending and "checked" or "",
-          duck_checked = row.food == "duck" and "checked" or "",
-          fish_checked = row.food == "fish" and "checked" or "",
-          veg_checked = row.food == "vegetarian" and "checked" or "",
-          allergies = row.allergies or "",
-        } .. "\n"
-    if guest_ids == "" then
-      guest_ids = row.guest_id
+    if row.is_plusone then
+      plusone = row
     else
-      guest_ids = guest_ids .. " " ..  row.guest_id
+      guest_inputs = guest_inputs .. 
+           tmp {
+            name = row.first .. " " .. row.last,
+            id = row.guest_id,
+            attending_checked = row.attending and "checked" or "",
+            duck_checked = row.food == "duck" and "checked" or "",
+            fish_checked = row.food == "fish" and "checked" or "",
+            veg_checked = row.food == "vegetarian" and "checked" or "",
+            allergies = row.allergies or "",
+          } .. "\n"
+      if guest_ids == "" then
+        guest_ids = row.guest_id
+      else
+        guest_ids = guest_ids .. " " ..  row.guest_id
+      end
+      guest_count = guest_count + 1
     end
-    guest_count = guest_count + 1
   end
+  local plus1_input = ""
   if guest_count == 1 then
-    plus1_input = plus1Template
-  else
-    plus1_input = ""
+    local plus1tmp = template.compile(plus1Template)
+    plus1_input = plus1tmp {
+      first = plusone.first or "",
+      last = plusone.last or "",
+      duck_checked = plusone.food == "duck" and "checked" or "",
+      fish_checked = plusone.food == "fish" and "checked" or "",
+      veg_checked = plusone.food == "vegetarian" and "checked" or "",
+      allergies = plusone.allergies or ""
+    }
   end
   template.render("rsvp.html", {
     guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]] ..
@@ -172,7 +184,7 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
            pg:escape_literal(true) .. ", " ..
            pg:escape_literal(args.plus1food or "") .. ", " ..
            pg:escape_literal(true) .. ", " ..
-           pg:escape_literal(args.plus1allergies) .. ")"
+           pg:escape_literal(args.plus1allergies or "") .. ")"
     local res, err = pg:query(q)
     ngx.log(ngx.ERR, "query is " .. q)
     if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
