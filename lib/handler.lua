@@ -177,6 +177,23 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
   end
 
   if args.plus1first and args.plus1first ~= "" then
+      q = "SELECT guest_id FROM guests WHERE " ..
+           "party_id = " ..  pg:escape_literal(tonumber(args.party_id)) .. " AND " ..
+           "is_plusone = 't'"
+    local res, err = pg:query(q)
+    if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+    if #res > 0 then
+      q = "UPDATE guests SET " ..
+           "party_id = " .. pg:escape_literal(tonumber(args.party_id)) .. ", " ..
+           "first_name = " .. pg:escape_literal(args.plus1first) .. ", " ..
+           "last_name = " .. pg:escape_literal(args.plus1last) .. ", " ..
+           "attending = " .. pg:escape_literal(true) .. ", " ..
+           "food = " .. pg:escape_literal(args.plus1food or "") .. ", " ..
+           "allergies = " .. pg:escape_literal(args.plus1allergies or "") ..
+           " WHERE guest_id = " .. pg:escape_literal(res[1].guest_id)
+      local res, err = pg:query(q)
+      if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+    else
       q = "INSERT INTO guests (party_id, first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
            pg:escape_literal(tonumber(args.party_id)) .. ", " ..
            pg:escape_literal(args.plus1first) .. ", " ..
@@ -185,8 +202,14 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
            pg:escape_literal(args.plus1food or "") .. ", " ..
            pg:escape_literal(true) .. ", " ..
            pg:escape_literal(args.plus1allergies or "") .. ")"
+      local res, err = pg:query(q)
+      if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
+    end
+  else
+    q = "DELETE FROM guests WHERE " ..
+        "party_id = " ..  pg:escape_literal(tonumber(args.party_id)) .. " AND " ..
+        "is_plusone = 't'"
     local res, err = pg:query(q)
-    ngx.log(ngx.ERR, "query is " .. q)
     if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
   end
 
