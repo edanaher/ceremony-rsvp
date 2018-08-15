@@ -109,7 +109,7 @@ if party then
   local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, drink, allergies, is_plusone FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
 
-  local q = "SELECT comments FROM parties WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local q = "SELECT has_plus_one, comments FROM parties WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local pres = assert(pg:query(q))
   if #pres > 0 then
     pres = pres[1]
@@ -150,19 +150,23 @@ if party then
   end
   local plus1_input = ""
   if guest_count == 1 then
-    local plus1tmp = template.compile(plus1Template)
-    plus1_input = plus1tmp {
-      first = plusone.first or "",
-      last = plusone.last or "",
-      duck_checked = plusone.food == "duck" and "checked" or "",
-      fish_checked = plusone.food == "fish" and "checked" or "",
-      veg_checked = plusone.food == "vegetarian" and "checked" or "",
-      wine_checked = plusone.drink == "wine" and "checked" or "",
-      beer_checked = plusone.drink == "beer" and "checked" or "",
-      both_drinks_checked = plusone.drink == "both" and "checked" or "",
-      no_drink_checked = plusone.drink == "neither" and "checked" or "",
-      allergies = plusone.allergies or ""
-    }
+    if pres.has_plus_one then
+      local plus1tmp = template.compile(plus1Template)
+      plus1_input = plus1tmp {
+        first = plusone.first or "",
+        last = plusone.last or "",
+        duck_checked = plusone.food == "duck" and "checked" or "",
+        fish_checked = plusone.food == "fish" and "checked" or "",
+        veg_checked = plusone.food == "vegetarian" and "checked" or "",
+        wine_checked = plusone.drink == "wine" and "checked" or "",
+        beer_checked = plusone.drink == "beer" and "checked" or "",
+        both_drinks_checked = plusone.drink == "both" and "checked" or "",
+        no_drink_checked = plusone.drink == "neither" and "checked" or "",
+        allergies = plusone.allergies or ""
+      }
+    else
+      plus1_input = [[<p>Please <a href="mailto:us@kellyandevan.party">e-mail us</a> if you'd like to bring a +1.</p>]]
+    end
   end
   template.render("rsvp.html", {
     guest_inputs = guest_inputs .. [[<input type="hidden" name="guests" value="]] .. guest_ids .. [["/>]] ..
