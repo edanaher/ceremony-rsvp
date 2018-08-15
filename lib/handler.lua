@@ -29,6 +29,12 @@ local guestFormTemplate = [[
       <input type="radio" name="food_{{id}}" value="fish" {{fish_checked}} >Fish</input>
       <input type="radio" name="food_{{id}}" value="vegetarian" {{veg_checked}} >Vegetarian Surprise</input>
     </p>
+    <p>Drink with dinner:
+      <input type="radio" name="drink_{{id}}" value="wine" {{wine_checked}} >Wine</input>
+      <input type="radio" name="drink_{{id}}" value="beer" {{beer_checked}} >Beer</input>
+      <input type="radio" name="drink_{{id}}" value="both" {{both_drinks_checked}} >Both</input>
+      <input type="radio" name="drink_{{id}}" value="neither" {{no_drink_checked}} >Neither</input>
+    </p>
     <p>Food restrictions/allergies: <input type="text" name="allergies_{{id}}" value="{{allergies}}" /></p>
   </div>
 ]]
@@ -42,6 +48,12 @@ local plus1Template = [[
       <input type="radio" name="plus1food" value="duck" {{duck_checked}} >Duck</input>
       <input type="radio" name="plus1food" value="fish" {{fish_checked}} >Fish</input>
       <input type="radio" name="plus1food" value="vegetarian" {{veg_checked}} >Vegetarian Surprise</input>
+    </p>
+    <p>Drink with dinner:
+      <input type="radio" name="plus1drink" value="wine" {{wine_checked}} >Wine</input>
+      <input type="radio" name="plus1drink" value="beer" {{beer_checked}} >Beer</input>
+      <input type="radio" name="plus1drink" value="both" {{both_drinks_checked}} >Both</input>
+      <input type="radio" name="plus1drink" value="neither" {{no_drink_checked}} >Neither</input>
     </p>
     <p>Food restrictions/allergies: <input type="text" name="plus1allergies" value="{{allergies}}"/></p>
   </div>
@@ -94,7 +106,7 @@ end
 
 local party = ngx.var.request_uri:match("/rsvp/rsvp/(.+)")
 if party then
-  local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, allergies, is_plusone FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
+  local q = "SELECT guest_id, first_name AS first, last_name AS last, attending, food, drink, allergies, is_plusone FROM guests WHERE party_id = " .. pg:escape_literal(tonumber(party))
   local res = assert(pg:query(q))
 
   local q = "SELECT comments FROM parties WHERE party_id = " .. pg:escape_literal(tonumber(party))
@@ -122,6 +134,10 @@ if party then
             duck_checked = row.food == "duck" and "checked" or "",
             fish_checked = row.food == "fish" and "checked" or "",
             veg_checked = row.food == "vegetarian" and "checked" or "",
+            wine_checked = row.drink == "wine" and "checked" or "",
+            beer_checked = row.drink == "beer" and "checked" or "",
+            both_drinks_checked = row.drink == "both" and "checked" or "",
+            no_drink_checked = row.drink == "neither" and "checked" or "",
             allergies = row.allergies or "",
           } .. "\n"
       if guest_ids == "" then
@@ -141,6 +157,10 @@ if party then
       duck_checked = plusone.food == "duck" and "checked" or "",
       fish_checked = plusone.food == "fish" and "checked" or "",
       veg_checked = plusone.food == "vegetarian" and "checked" or "",
+      wine_checked = plusone.drink == "wine" and "checked" or "",
+      beer_checked = plusone.drink == "beer" and "checked" or "",
+      both_drinks_checked = plusone.drink == "both" and "checked" or "",
+      no_drink_checked = plusone.drink == "neither" and "checked" or "",
       allergies = plusone.allergies or ""
     }
   end
@@ -166,10 +186,11 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
       q = "UPDATE guests SET " ..
           "attending = " .. pg:escape_literal(args["attending_" .. id] == "on") .. ", " ..
           "food = " .. pg:escape_literal(args["food_" .. id] or "") .. ", " ..
+          "drink = " .. pg:escape_literal(args["drink_" .. id] or "") .. ", " ..
           "allergies = " .. pg:escape_literal(args["allergies_" .. id] or "") ..
           " WHERE guest_id = " .. pg:escape_literal(tonumber(id))
     else
-      q = "UPDATE guests SET attending = 'f', food = NULL WHERE guest_id = " .. pg:escape_literal(tonumber(id))
+      q = "UPDATE guests SET attending = 'f', food = NULL, drink = NULL WHERE guest_id = " .. pg:escape_literal(tonumber(id))
     end
     ngx.log(ngx.ERR, "query is " .. q)
     local res, err = pg:query(q)
@@ -189,17 +210,19 @@ elseif ngx.var.request_uri == "/rsvp/submit" then
            "last_name = " .. pg:escape_literal(args.plus1last) .. ", " ..
            "attending = " .. pg:escape_literal(true) .. ", " ..
            "food = " .. pg:escape_literal(args.plus1food or "") .. ", " ..
+           "drink = " .. pg:escape_literal(args.plus1drink or "") .. ", " ..
            "allergies = " .. pg:escape_literal(args.plus1allergies or "") ..
            " WHERE guest_id = " .. pg:escape_literal(res[1].guest_id)
       local res, err = pg:query(q)
       if res == nil then return ngx.say("SQL ERROR: " .. tostring(err)) end
     else
-      q = "INSERT INTO guests (party_id, first_name, last_name, attending, food, is_plusone, allergies) VALUES (" ..
+      q = "INSERT INTO guests (party_id, first_name, last_name, attending, food, drink, is_plusone, allergies) VALUES (" ..
            pg:escape_literal(tonumber(args.party_id)) .. ", " ..
            pg:escape_literal(args.plus1first) .. ", " ..
            pg:escape_literal(args.plus1last) .. ", " ..
            pg:escape_literal(true) .. ", " ..
            pg:escape_literal(args.plus1food or "") .. ", " ..
+           pg:escape_literal(args.plus1drink or "") .. ", " ..
            pg:escape_literal(true) .. ", " ..
            pg:escape_literal(args.plus1allergies or "") .. ")"
       local res, err = pg:query(q)
